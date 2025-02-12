@@ -8,6 +8,18 @@ Usage:
   Note the following things.
     1. RBDs without a cutset will be ignored, since no information of unavailability.
     2. If a RBD has more than one cutset, the script will be interrupted, since the script doesn't know which cutset users want to use.  
+    3. Profiles of the checklist are required to setup. See the following comment.
+*/
+
+
+/*
+Miscellanous->Checklist Task/Requirement
+
+single_unavailability(Derived property, OCL):
+self.artifacts.oclAsType(rbd::RBDAnalysisModel).averageUnavailability
+
+unavailability(Derived property, OCL):
+1 - (self.artifacts.oclAsType(rbd::RBDAnalysisModel).averageUnavailability ->iterate(elem : Real; acc : Real = 1 | acc * (1-elem)))
 */
 
 load(".lib/factory.js");
