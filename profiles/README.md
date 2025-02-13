@@ -8,3 +8,8 @@ OCL
 
 Profiling -> FMEA Worksheets -> Component Function (derived FMEA and SWA only)
 ![setting](./img/sgfmea2.png)
+
+# PMHF separate
+The native sample project for PMHF approximation doesn't provide FIT of each pattern. This project provides this.
+![](./img/pmhf_separate.png)
+[src](./PMHF_separate)
