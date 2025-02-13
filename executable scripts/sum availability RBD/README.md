@@ -1,6 +1,6 @@
 # Sum up RBD availability
 ## Procedure
-Step 1. Get your RBDs ready in a pacakge.
+Step 1. Get your RBDs ready in a package.
 ![multiple RBDs](screenshot1.png)
 
 Step 2. Execute the script on a pacakge that has multiple RBDs
