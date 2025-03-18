@@ -18,7 +18,7 @@ var checklistEntriesEN = [
      "exaplanation": "- CAN connection between two ECUs of the same system\n- Communication between two microcontrollers within the same ECU"
     },
     {"class": "Unintended Interface",
-     "exaplanation": "One functionality overruling the other because of missing synchronization"
+     "exaplanation": "- One functionality overruling the other because of missing synchronization"
     }
 ];
 
