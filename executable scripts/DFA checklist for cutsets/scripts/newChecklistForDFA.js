@@ -1,21 +1,47 @@
-// $EXPERIMENTAL$ $STRICT_MODE
+// $EXPERIMENTAL$ $STRICT_MODE$
 load(".lib/factory.js");
-//load(".lib/DfaChecklistitem.js");
-var checklistTempateName =  "[Scripting] Tasklist: DFA  & Cutset"
-function main() {
-        //var template = finder.findByType(Metamodel.checklist.Checklist).and("name", "ZZ").first();
+load(".lib/deepcopy.js");
+var checklistTempateName = "[Scripting] Tasklist: DFA  & Cutset";
 
-        var template = finder.findByType(Metamodel.checklist.Checklist).and("name", checklistTempateName).first();
-        var context = {};
-        if (template) {
-            context['template'] = template;
-        }
-       
-        var list = Factory.createElement(finder.getScope(), Metamodel.checklist.Checklist, context);
-//    var targetChecklist = Factory.createElement(selection[0], Metamodel.checklist.Checklist);
-};
+function newChecklist(checklistName, place) {
+  var cl = Factory.createElement(place, Metamodel.checklist.Checklist);
+  cl.name = checklistName;
+  return cl;
+}
 
+function getChecklistItem(checklistName) {
+  var cl = finder
+    .findByType(Metamodel.checklist.Checklist)
+    .and("name", checklistName)
+    .first();
+  if (cl.items) {
+    return cl.items;
+  }
+  return null;
+}
 
-//main();
+function main(cutsetAnalysisModel) {
+  if (!cutsetAnalysisModel) {
+    cutsetAnalysisModel = selection[0];
+  }
+  var checklistName =
+    "[DFA checklist] " +
+    cutsetAnalysisModel.analyzedModel.name +
+    " - " +
+    cutsetAnalysisModel.name;
+  var checklistLocation = cutsetAnalysisModel.analyzedModel
+    .mediniGetOpposites("originalModel")[0]
+    .mediniGetContainer();
+  var cutSets = cutsetAnalysisModel.cutSets.toArray();
+  var numberOfCutSets = cutSets.length;
+  var checklist = newChecklist(checklistName, checklistLocation);
+  var checklistitemTemplate = getChecklistItem(checklistTempateName)[0];
+  var checklistItem;
+  for (var i = 0; i < numberOfCutSets; i++) {
+    checklistItem = deepcopy(checklistitemTemplate, checklist);
+    checklistItem.name = (i + 1).toString();
+    checklistItem.artifacts.add(cutSets[i]);
+  }
+}
 
-var list = Factory.createElement(selection[0], Metamodel.checklist.StaticChecklistItem);
+main();
