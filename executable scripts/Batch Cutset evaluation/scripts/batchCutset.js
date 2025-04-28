@@ -1,5 +1,5 @@
-// $EXPERIMENTAL$ $STRICT_MODE$ $ENHANCED_CONTAINMENT_ACCESS$ $DEBUG$ $ENHANCED_JAVA_ACCESS$
-// load(".lib/factory.js");
+// $EXPERIMENTAL$ $STRICT_MODE$ $ENHANCED_CONTAINMENT_ACCESS$ $ENHANCED_JAVA_ACCESS$ $DEBUG$
+load(".lib/factory.js");
 load(".lib/ui.js");
 var FTAUtil = load(".lib/fta.js");
 
@@ -43,6 +43,9 @@ function FtaModel(ftaModel) {
     return probs;
   };
   this.setProbs = function (probs) {
+    if (!probs) {
+      return;
+    }
     var e, id, prob;
     var events = this.getEvents();
     for (var i = 0; i < events.length; i++) {
@@ -82,7 +85,7 @@ function FtaModel(ftaModel) {
       }
     }
     if (matchingCutsets.length > 1) {
-      alert (
+      alert(
         "Warning: Multiple cutsets found with the name '" + cutsetName + "'."
       );
     }
@@ -98,11 +101,23 @@ function ChecklistItem(checklistItem) {
     return checklistItem.name;
   };
   this.getArtifacts = function () {
+    if (!checklistItem.artifacts) {
+      return [];
+    }
     var artifacts = checklistItem.artifacts.toArray();
-    if (artifacts.length == 0) {
+    return artifacts;
+  };
+  this.getParent = function () {
+    if (
+      !checklistItem ||
+      !checklistItem.mediniGetOpposites("subItems").size()
+    ) {
       return null;
     }
-    return artifacts;
+    var parent = new this.constructor(
+      checklistItem.mediniGetOpposites("subItems").get(0)
+    );
+    return parent;
   };
   this.setNote = function (note) {
     checklistItem.note = note;
@@ -111,39 +126,112 @@ function ChecklistItem(checklistItem) {
     checklistItem.artifacts.add(artifact);
   };
   this.getSubitems = function () {
-    var subitems = checklistItem.subItems.toArray();
-    if (subitems.length == 0) {
-      return null;
+    if (!checklistItem.subItems || !checklistItem.subItems.size()) {
+      return [];
     }
+    var subitems = checklistItem.subItems.toArray();
     return subitems;
+  };
+  this.newSubitem = function (name, note) {
+    var subitem = Factory.createElement(
+      checklistItem,
+      Metamodel.checklist.StaticChecklistItem
+    );
+    subitem.name = name;
+    subitem.note = note;
+  };
+  this.getType = function () {
+    // "FtaModelItem", "TestcaseItem", "EventnodeItem", "Unknown"
+    var isFtaModelItem =
+      this.getArtifacts().length == 1 &&
+      this.getArtifacts()[0] instanceof Metamodel.FTA.FTAModel;
+    var isTestcaseItem =
+      this.getParent() && this.getParent().getType() == "FtaModelItem";
+    var isEventnodeItem =
+      this.getParent() && this.getParent().getType() == "TestcaseItem";
+    var getNote = this.getNote; // help isValidNote get this.getNote
+    var isValidNote = function () {
+      if (!isNaN(parseFloat(getNote()) && isFinite(getNote()))) return true;
+      try {
+        JSON.parse(getNote());
+        return true;
+      } catch (_e) {
+        return false;
+      }
+    };
+    if (isFtaModelItem) {
+      return "FtaModelItem";
+    } else if (isTestcaseItem && isValidNote()) {
+      return "TestcaseItem";
+    } else if (isEventnodeItem && isValidNote()) {
+      return "EventnodeItem";
+    } else {
+      return "Unknown/invalid";
+    }
+  };
+  this.getProbsFromEventnodeItem = function () {
+    var probs = {};
+    var artifact, id, prob;
+    for (var i = 0; i < this.getArtifacts().length; i++) {
+      artifact = this.getArtifacts()[i];
+      if (artifact instanceof Metamodel.FTA.Event) {
+        id = artifact.id;
+        prob = parseBigDecimal(this.getNote());
+        probs[id] = prob;
+      }
+    }
+    return probs;
   };
 }
 
-function main(ftaModelChecklistItem) {
-  if (!ftaModelChecklistItem) {
-    ftaModelChecklistItem = selection[0];
+function handler(checklistItem, ftaModel) {
+  if (!checklistItem) {
+    checklistItem = selection[0];
   }
-  var checklistItem = new ChecklistItem(ftaModelChecklistItem);
-  var ftam = new FtaModel(checklistItem.getArtifacts()[0]);
-  var subChecklistItems = checklistItem.getSubitems();
-  var subChecklistItem, prob, cutsetName;
-  for (var i = 0; i < subChecklistItems.length; i++) {
-    subChecklistItem = new ChecklistItem(subChecklistItems[i]);
-    cutsetName = subChecklistItem.getName() + subChecklistItem.getNote();
-    try {
-      prob = JSON.parse(subChecklistItem.getNote());
-    } catch (_e) {
-      alert( "Warning: Note for cutset '" + cutsetName + "' is not valid JSON. Skipping this item.");
-      continue;
+  var cli = new ChecklistItem(checklistItem);
+  var name = cli.getName();
+  var artifacts = cli.getArtifacts();
+  var note = cli.getNote();
+  var subItems = cli.getSubitems();
+  var subItem;
+  if (cli.getType() == "FtaModelItem") {
+    // it is a fta model cl. go deeper
+    if (!ftaModel) {
+      ftaModel = new FtaModel(artifacts[0]);
     }
+    for (var i = 0; i < subItems.length; i++) {
+      handler(subItems[i], ftaModel);
+    }
+  } else if (cli.getType() == "TestcaseItem") {
+    // it is a testcase cl. set the prob from json, go deeper, and calculate
+    for (var i = 0; i < subItems.length; i++) {
+      // the testcase has eventnodes
+      subItem = subItems[i];
+      handler(subItem, ftaModel);
+    }
+    ftaModel.setProbs(JSON.parse(note));
+    ftaModel.newCutset(name);
+    ftaModel.resetProbs();
+    cli.setArtifact(ftaModel.getCutset(name));
+  } else if (cli.getType() == "EventnodeItem") {
+    // it is an eventnode cl. set the probs
+    ftaModel.setProbs(cli.getProbsFromEventnodeItem());
+  }
+}
 
-    ftam.setProbs(prob);
-    ftam.newCutset(cutsetName);
-    subChecklistItem.setArtifact(ftam.getCutset(cutsetName));
-    ftam.resetProbs();
+function main(scope) {
+  if (!scope) {
+    scope = selection[0];
+  }
+  if (scope instanceof Metamodel.checklist.Checklist) {
+    var items = scope.items.toArray();
+    for (var i = 0; i < items.length; i++) {
+      handler(items[i]);
+    }
+  } else if (scope instanceof Metamodel.checklist.StaticChecklistItem) {
+    handler(scope);
   }
 }
 
 main();
-// selection[0].eventProbabilityParameters.missionTime = parseBigDecimal("8000");
 console.log("script done");
