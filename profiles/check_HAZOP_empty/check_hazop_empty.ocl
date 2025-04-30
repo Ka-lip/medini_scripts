@@ -1,0 +1,13 @@
+-- contraint target class: hazop::HazopEntry
+-- ocl expression: the line starting with `inv:` in this file
+-- constraint severity: based on your plan. anyone is fine.
+-- description: Reviewed blank guideword cells don't match the blank guideword cells
+-- id : based on your numbering rule.
+-- message: {0} has at least one blank guideword that is not selected in its review blank guideword cell or vice versa.
+-- live mode: off (unchecked)
+inv:
+(self.mediniGetOpposites('entries').oclAsType(hazop::HazopAnalysisModel).guidewords->asSet()
+  - self.guidewordToFailures.key->asSet()
+).name->asSet()
+= self.user_reviewed_blank->asSet()
+
