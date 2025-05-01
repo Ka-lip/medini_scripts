@@ -204,6 +204,9 @@ function handler(checklistItem, ftaModel) {
     }
   } else if (cli.getType() == "TestcaseItem") {
     // it is a testcase cl. set the prob from json, go deeper, and calculate
+    if (!ftaModel) {
+      ftaModel = new FtaModel(cli.getParent().getArtifacts()[0]);
+    }
     for (var i = 0; i < subItems.length; i++) {
       // the testcase has eventnodes
       subItem = subItems[i];
