@@ -50,7 +50,7 @@ function Req(req) {
     if (!kind) {
       kind = kindString;
     }
-    return req.mediniGetTracedElements(metamodel,kindString).toArray();
+    return req.mediniGetTracedElements(metamodel, kindString).toArray();
   };
   this.removeTraces = function () {
     var tracesToRemove = this.getTraces();
@@ -95,7 +95,7 @@ function main(scope) {
   var k_scope, rm, reqs, req, contributesToReqs;
   for (var k = 0; k < scope.length; k++) {
     k_scope = scope[k];
-    if ((!scope) instanceof Metamodel.safetygoals.SafetyRequirementsModel) {
+    if (!(k_scope instanceof Metamodel.safetygoals.SafetyRequirementsModel)) {
       continue;
     }
     rm = new ReqModel(k_scope);
