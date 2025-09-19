@@ -18,11 +18,18 @@
  */
 load(".lib/factory.js");
 load(".lib/trashbin.js");
+load(".lib/ui.js");
+var FTAUtil = load(".lib/fta.js");
 
 const PROB_FORMULA =
   "if (event.user_latent_failure) p = lambda * parseInt(event.user_latent_failure_time);";
 const FREQ_FORMULA = "f = lambda * 1E-9;";
 
+const CALC_PROB_OPTIONS = {
+  mode: "PROBABILITY", // "PROBABILITY", or "UNAVAILABILITY_AVERAGE", or "UNAVAILABILITY_WORST_CASE"
+  missionTime: parseBigDecimal("8000"),
+  calculateIntermediateEvents: true,
+};
 function updateProb(e, prob_f, freq_f) {
   if (e.effectiveKind != "BASE") return;
   if (e.probabilityData) {
@@ -112,5 +119,27 @@ function createIssues(objs, msg, clearOldIssues, openProblemsView) {
   return;
 }
 
+function calcProb(e) {
+  if (e == undefined) {
+    e = selection[0];
+  }
+  FTAUtil.calculateEventProbability(e, CALC_PROB_OPTIONS);
+}
+function calcRootEventsProb(m) {
+  if (m == undefined) {
+    m = selection[0];
+  }
+  var roots = m.rootNodes.toArray();
+  for (var i = 0; i < roots.length; i++) {
+    calcProb(roots[i]);
+  }
+}
+var wantCalculation = selectOption(
+  "Confirmation",
+  "Do you want to update the formula only or calculate the possibility at the same time?",
+  ["Update the formula ONLY", "ALSO calculate the possibility"]
+);
+
 updateProbs();
 createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
+if (wantCalculation) calcRootEventsProb();
