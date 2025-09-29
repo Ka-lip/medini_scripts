@@ -13,6 +13,7 @@
  * 3. Execute the script at the level of the FTA model (root of the FTA).
  *
  * Changelog:
+ * 2025/09/29: add the function to alert the user if the selection is not a FTA model.
  * 2025/09/19: Add Problem view alert by ka-lip
  * 2025/09/18: Released by ka-lip.chu@ansys.com
  */
@@ -134,12 +135,21 @@ function calcRootEventsProb(m) {
     calcProb(roots[i]);
   }
 }
-var wantCalculation = selectOption(
-  "Confirmation",
-  "Do you want to update the formula only or calculate the possibility at the same time?",
-  ["Update the formula ONLY", "ALSO calculate the possibility"]
-);
 
-updateProbs();
-createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
-if (wantCalculation) calcRootEventsProb();
+function main() {
+  var doCalculation = selectOption(
+    "Confirmation",
+    "Do you want to update the formula only or calculate the possibility at the same time?",
+    ["Update the formula ONLY", "ALSO calculate the possibility"]
+  );
+
+  updateProbs();
+  createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
+  if (doCalculation) calcRootEventsProb();
+}
+
+if (selection[0] instanceof Metamodel.FTA.FTAModel) {
+  main();
+} else {
+  alert("Please select a FTA model.");
+}
