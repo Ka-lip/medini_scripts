@@ -13,24 +13,32 @@
  * 3. Execute the script at the level of the FTA model (root of the FTA).
  *
  * Changelog:
- * 2025/09/29: add the function to alert the user if the selection is not a FTA model.
- * 2025/09/19: Add Problem view alert by ka-lip
- * 2025/09/18: Released by ka-lip.chu@ansys.com
+ * 2025/10/02: modifiied probability formula and added PJ_MISSION_TIME
+ * 2025/09/29: added the function to alert the user if the selection is not a FTA model.
+ * 2025/09/19: added Problem view alert by ka-lip
+ * 2025/09/18: released by ka-lip.chu@ansys.com
  */
+
 load(".lib/factory.js");
 load(".lib/trashbin.js");
 load(".lib/ui.js");
 var FTAUtil = load(".lib/fta.js");
 
 const PROB_FORMULA =
-  "if (event.user_latent_failure) p = lambda * parseInt(event.user_latent_failure_time);";
+  "if (event.user_latent_failure) p = lambda * (parseInt(event.user_latent_failure_time) || event.eventProbabilityParameters.missionTime);";
 const FREQ_FORMULA = "f = lambda * 1E-9;";
+
+const PJ_MISSION_TIME = Global.getFinder(finder.scope.eAnnotations)
+  .find("source", "preference#eventProbabilityParameters")
+  .first()
+  .contents.get(0).missionTime;
 
 const CALC_PROB_OPTIONS = {
   mode: "PROBABILITY", // "PROBABILITY", or "UNAVAILABILITY_AVERAGE", or "UNAVAILABILITY_WORST_CASE"
-  missionTime: parseBigDecimal("8000"),
+  missionTime: parseBigDecimal(PJ_MISSION_TIME),
   calculateIntermediateEvents: true,
 };
+
 function updateProb(e, prob_f, freq_f) {
   if (e.effectiveKind != "BASE") return;
   if (e.probabilityData) {
@@ -41,8 +49,8 @@ function updateProb(e, prob_f, freq_f) {
     Metamodel.FTA.ScriptedProbabilityModel
   );
   probData.scriptKind = "JS";
-  probData.probFormula = PROB_FORMULA;
-  probData.freqFormula = FREQ_FORMULA;
+  probData.probFormula = prob_f;
+  probData.freqFormula = freq_f;
   return;
 }
 
@@ -63,8 +71,9 @@ function updateProbs(scope) {
     scope = selection[0];
   }
   var events = getFtaEvents(scope);
+  var ith_event;
   for (var i = 0; i < events.length; i++) {
-    var ith_event = events[i];
+    ith_event = events[i];
     if (ith_event.user_latent_failure) {
       updateProb(ith_event, PROB_FORMULA, FREQ_FORMULA);
     }
@@ -78,7 +87,7 @@ function getInvalidEvents(scope) {
   }
   var events = getFtaEvents(scope);
   var invalidEvents = events.filter(
-    (e) => e.user_latent_failure && !Boolean(Number(e.user_latent_failure_time))
+    (e) => e.user_latent_failure && !(Number(e.user_latent_failure_time))
   );
   return invalidEvents;
 }
@@ -144,7 +153,7 @@ function main() {
   );
 
   updateProbs();
-  createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
+  // createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
   if (doCalculation) calcRootEventsProb();
 }
 
