@@ -13,6 +13,7 @@
  * 3. Execute the script at the level of the FTA model (root of the FTA).
  *
  * Changelog:
+ * 2025/10/03: removed the criteria to update formula. all events are applied now. expanded validation check to non-base events 
  * 2025/10/02: modifiied probability formula and added PJ_MISSION_TIME
  * 2025/09/29: added the function to alert the user if the selection is not a FTA model.
  * 2025/09/19: added Problem view alert by ka-lip
@@ -25,7 +26,7 @@ load(".lib/ui.js");
 var FTAUtil = load(".lib/fta.js");
 
 const PROB_FORMULA =
-  "if (event.user_latent_failure) p = lambda * (parseInt(event.user_latent_failure_time) || event.eventProbabilityParameters.missionTime);";
+  "p = lambda * (parseInt(event.user_latent_failure_time) || event.eventProbabilityParameters.missionTime);";
 const FREQ_FORMULA = "f = lambda * 1E-9;";
 
 const PJ_MISSION_TIME = Global.getFinder(finder.scope.eAnnotations)
@@ -54,15 +55,19 @@ function updateProb(e, prob_f, freq_f) {
   return;
 }
 
-function getFtaEvents(scope) {
+function getFtaEvents(scope, onlyBaseKind) {
   if (scope == undefined) {
     scope = selection[0];
   }
-  var events = Global.getFinder(scope)
-    .findByType(Metamodel.FTA.Event)
-    .filter(function (e) {
+  if (onlyBaseKind == undefined) {
+    onlyBaseKind = true;
+  }
+  var events = Global.getFinder(scope).findByType(Metamodel.FTA.Event);
+  if (onlyBaseKind) {
+    events = events.filter(function (e) {
       return e.effectiveKind == "BASE"; // note that arrow functions don't work well with finder objects.
     });
+  }
   return events.toArray();
 }
 
@@ -74,9 +79,9 @@ function updateProbs(scope) {
   var ith_event;
   for (var i = 0; i < events.length; i++) {
     ith_event = events[i];
-    if (ith_event.user_latent_failure) {
-      updateProb(ith_event, PROB_FORMULA, FREQ_FORMULA);
-    }
+    // if (ith_event.user_latent_failure) {
+    updateProb(ith_event, PROB_FORMULA, FREQ_FORMULA);
+    // }
   }
   return;
 }
@@ -85,9 +90,14 @@ function getInvalidEvents(scope) {
   if (scope == undefined) {
     scope = selection[0];
   }
-  var events = getFtaEvents(scope);
+  var events = getFtaEvents(scope, false);
   var invalidEvents = events.filter(
-    (e) => e.user_latent_failure && !(Number(e.user_latent_failure_time))
+    (e) =>
+      (e.effectiveKind == "BASE" &&
+        !e.user_latent_failure &&
+        Number(e.user_latent_failure_time)) ||
+      (e.effectiveKind != "BASE" &&
+        (e.user_latent_failure || Number(e.user_latent_failure_time)))
   );
   return invalidEvents;
 }
@@ -135,6 +145,7 @@ function calcProb(e) {
   }
   FTAUtil.calculateEventProbability(e, CALC_PROB_OPTIONS);
 }
+
 function calcRootEventsProb(m) {
   if (m == undefined) {
     m = selection[0];
@@ -153,7 +164,10 @@ function main() {
   );
 
   updateProbs();
-  // createIssues(getInvalidEvents(), "Mission Time is not set at {0}.");
+  createIssues(
+    getInvalidEvents(),
+    "Check {0}. It may be incorrect if BASE events with unchecked latent failures are assigned a mission time, or if non-BASE events’ profiles are filled."
+  );
   if (doCalculation) calcRootEventsProb();
 }
 
