@@ -33,16 +33,29 @@ var featureChangeListener = {
 
   handleElementCreated: function (createdElement, context) {
     return function () {
+      if (
+        !(
+          "user_id_prefix_counter" in createdElement.model &&
+          "user_id_prefix" in createdElement.model
+        )
+      ) {
+        alert(
+          "Some profile properties required for the separate-requirements-autocounter automation are missing. Please ensure that both user_id_prefix and user_id_prefix_counter are created properly for the current requirement model (or remove the hook to fully get rid of the automation)."
+        );
+        return;
+      }
       var currentCounter = createdElement.model.user_id_prefix_counter;
       if (!(currentCounter && createdElement.model.user_id_prefix)) {
         alert(
-          "Check the requirement model's profile. Either id_prefix or id_prefix_counter is set properply."
+          "The profile properties required for the separate-requirements-autocounter automation are not set. Please ensure that both user_id_prefix and user_id_prefix_counter are set properly for the current requirement model (or remove the hook to fully get rid of the automation)."
         );
         return;
       }
       var nextCounter = String(Number(currentCounter) + 1);
       if (isNaN(nextCounter)) {
-        alert("Fix id_prefix_counter. id_prefix_counter only accepts numbers.");
+        alert(
+          "The setting for separate-requirements-autocounter is not correct. Please fix id_prefix_counter in requirement models profiles. id_prefix_counter only accepts numbers."
+        );
         return;
       }
       var zeroQty = currentCounter.length - nextCounter.length;
