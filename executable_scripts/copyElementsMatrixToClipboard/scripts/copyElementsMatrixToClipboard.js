@@ -4,30 +4,20 @@ load(".lib/ui.js");
 
 var defaultInfos = ["ISO26262_asil", "name"];
 
-function getElementsInfo(scope, infos) {
-  if (!scope) {
-    scope = selection[0];
+function getElementsInfo(elements, infos) {
+  var elementsInfo = new Array(elements.length); // {"attr": "value", ...}
+  if (elements.length == 1) {
+    elements = elements[0].the_owned_elements.toArray();
   }
-  if (!infos) {
-    infos = defaultInfos;
-  }
-  var elements = scope.the_owned_elements.toArray();
-
-  var element, attr, element_info;
-  var elements_info = [];
   for (var i = 0; i < elements.length; i++) {
-    element = elements[i];
-    element_info = {};
+    var element = elements[i];
+    var elementInfo = {};
     for (var j = 0; j < infos.length; j++) {
-      attr = infos[j];
-      var value = element[attr];
-      if (value) {
-        element_info[attr] = value;
-      }
+      elementInfo[infos[j]] = element[infos[j]];
     }
-    elements_info.push(element_info);
+    elementsInfo[i] = elementInfo;
   }
-  return elements_info;
+  return elementsInfo;
 }
 
 function Matrix(r, c) {
@@ -86,10 +76,7 @@ function newCsv(arr2d) {
   return rows.join("\n");
 }
 
-function main(scope, rowHeaders, colHeaders) {
-  if (!scope) {
-    scope = selection[0];
-  }
+function main(elements, rowHeaders, colHeaders) {
   if (!rowHeaders) {
     rowHeaders = defaultInfos;
   }
@@ -98,7 +85,7 @@ function main(scope, rowHeaders, colHeaders) {
   }
   var n_rowHeaders = rowHeaders.length;
   var n_colHeaders = colHeaders.length;
-  var elementsInfo = getElementsInfo(scope);
+  var elementsInfo = getElementsInfo(elements, defaultInfos);
   var n_elements = elementsInfo.length;
   var m = new Matrix(n_elements + n_rowHeaders, n_elements + n_colHeaders);
 
@@ -128,5 +115,5 @@ function main(scope, rowHeaders, colHeaders) {
   return csv;
 }
 
-copyToClipboard(main());
+copyToClipboard(main(selection));
 alert("Elements matrix copied to clipboard.");

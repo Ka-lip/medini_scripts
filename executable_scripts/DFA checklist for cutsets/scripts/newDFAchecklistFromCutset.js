@@ -1,7 +1,14 @@
 // $EXPERIMENTAL$ $STRICT_MODE$
 load(".lib/factory.js");
 load(".lib/deepcopy.js");
-var checklistTempateName = "[Scripting] Tasklist: DFA  & Cutset";
+//load(".lib/DfaChecklistitem.js");
+var checklistTempateName = "[Scripting] Tasklist: DFA template";
+
+/*
+ * Create a checklist
+ * Create checklist items in the checklist
+ * Fill in the cutset objects in the checklist
+ */
 
 function newChecklist(checklistName, place) {
   var cl = Factory.createElement(place, Metamodel.checklist.Checklist);
@@ -20,6 +27,20 @@ function getChecklistItem(checklistName) {
   return null;
 }
 
+function updateChecklistItems() {}
+
+function getEventsName(cutset) {
+  var singleName;
+  var combinedName = "";
+  var events = cutset.events.toArray();
+  var iEvent;
+  for (var i = 0; i < events.length; i++) {
+    iEvent = events[i];
+    singleName = "[" + iEvent.id + "] " + iEvent.name;
+    combinedName = combinedName + " " + singleName;
+  }
+  return combinedName;
+}
 function main(cutsetAnalysisModel) {
   if (!cutsetAnalysisModel) {
     cutsetAnalysisModel = selection[0];
@@ -36,11 +57,11 @@ function main(cutsetAnalysisModel) {
   var numberOfCutSets = cutSets.length;
   var checklist = newChecklist(checklistName, checklistLocation);
   var checklistitemTemplate = getChecklistItem(checklistTempateName)[0];
-  var checklistItem;
   for (var i = 0; i < numberOfCutSets; i++) {
-    checklistItem = deepcopy(checklistitemTemplate, checklist);
-    checklistItem.name = (i + 1).toString();
+    var checklistItem = deepcopy(checklistitemTemplate, checklist);
     checklistItem.artifacts.add(cutSets[i]);
+    checklistItem.name =
+      "[" + (i + 1).toString() + "] " + getEventsName(cutSets[i]);
   }
 }
 
